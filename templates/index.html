@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UMG Biométrico - Portal de Control de Acceso</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos de la aplicación -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Notificaciones flotantes de estado -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- PANTALLA DE LOGIN (Visible por defecto si no hay sesión) -->
+    <div id="login-view" class="view-container login-page">
+        <div class="login-card">
+            <div class="login-logo">
+                <i class="fa-solid fa-fingerprint fingerprint-logo"></i>
+                <h1>UMG Biométrico</h1>
+                <p>Portal de Control de Acceso</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username"><i class="fa-solid fa-user"></i> Usuario o Carnet</label>
+                    <input type="text" id="login-username" placeholder="Ingrese su usuario o carnet" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="login-password" placeholder="Ingrese su contraseña" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">
+                    Iniciar Sesión
+                </button>
+            </form>
+            <div class="login-footer">
+                <p>Universidad Mariano Gálvez de Guatemala</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL (Dashboard y paneles) -->
+    <div id="app-view" class="app-layout hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-shield-halved app-icon"></i>
+                <h2>UMG Acceso</h2>
+            </div>
+            
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-circle"></i>
+                </div>
+                <div class="user-info">
+                    <span id="user-display-name">Administrador</span>
+                    <span id="user-display-role" class="badge">Super Admin</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-menu">
+                <ul>
+                    <li data-target="dashboard" class="menu-item active">
+                        <i class="fa-solid fa-chart-line"></i> <span>Dashboard</span>
+                    </li>
+                    <li data-target="checklist" class="menu-item role-admin role-docente">
+                        <i class="fa-solid fa-list-check"></i> <span>Checklist Estudiantes</span>
+                    </li>
+                    <li data-target="cursos-salones" class="menu-item role-admin">
+                        <i class="fa-solid fa-graduation-cap"></i> <span>Cursos y Salones</span>
+                    </li>
+                    <li data-target="camara" class="menu-item role-admin role-docente">
+                        <i class="fa-solid fa-camera"></i> <span>Monitoreo Facial</span>
+                    </li>
+                    <li data-target="arbol" class="menu-item role-admin role-docente">
+                        <i class="fa-solid fa-sitemap"></i> <span>Árbol de Asistencias</span>
+                    </li>
+                    <li data-target="restricciones" class="menu-item role-admin">
+                        <i class="fa-solid fa-ban"></i> <span>Restricciones</span>
+                    </li>
+                    <li data-target="estudiante-perfil" class="menu-item role-student hidden">
+                        <i class="fa-solid fa-address-card"></i> <span>Mi Perfil</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="btn-logout" class="btn btn-danger btn-block">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1 id="view-title">Dashboard</h1>
+                </div>
+                <div class="header-actions">
+                    <span id="current-time-display"><i class="fa-solid fa-calendar-day"></i> Cargando fecha...</span>
+                </div>
+            </header>
+
+            <div class="content-body">
+                
+                <!-- SECCIÓN: DASHBOARD GENERAL -->
+                <section id="pane-dashboard" class="pane">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-gradient-blue"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Personas</h3>
+                                <p id="stat-total-personas">...</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-gradient-green"><i class="fa-solid fa-door-open"></i></div>
+                            <div class="stat-info">
+                                <h3>Ingresos de Hoy</h3>
+                                <p id="stat-total-ingresos">...</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-gradient-orange"><i class="fa-solid fa-ban"></i></div>
+                            <div class="stat-info">
+                                <h3>Restricciones Activas</h3>
+                                <p id="stat-total-restricciones">...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-details">
+                        <div class="card card-table">
+                            <div class="card-header">
+                                <h2>Últimos Ingresos Registrados</h2>
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table" id="table-dashboard-ingresos">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Ubicación</th>
+                                                <th>Fecha y Hora</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="3" class="text-center">Cargando registros...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: CHECKLIST ESTUDIANTES -->
+                <section id="pane-checklist" class="pane hidden">
+                    <div class="card card-actionable">
+                        <div class="card-header-actions">
+                            <h2>Estudiantes Inscritos en la Universidad</h2>
+                            <div class="search-filters">
+                                <div class="search-input-wrapper">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="checklist-search" placeholder="Buscar por carnet, nombre...">
+                                </div>
+                                <select id="checklist-filter-carrera">
+                                    <option value="">Todas las carreras</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" id="table-checklist">
+                                    <thead>
+                                        <tr>
+                                            <th>Carnet</th>
+                                            <th>Estudiante</th>
+                                            <th>Carrera / Sem / Sec</th>
+                                            <th>Correo</th>
+                                            <th>Cursos Asignados</th>
+                                            <th class="role-admin">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="6" class="text-center">Cargando listado...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODAL: ASIGNACIÓN DE CURSOS (Para administradores) -->
+                    <div id="modal-asignar-curso" class="modal hidden">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Asignación de Cursos a Estudiante</h3>
+                                <button class="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Estudiante: <strong id="modal-estudiante-name">-</strong> (Carnet: <span id="modal-estudiante-carnet">-</span>)</p>
+                                
+                                <form id="form-asignar-estudiante-curso" class="row-form">
+                                    <div class="form-group flex-grow">
+                                        <label for="select-asignar-curso">Seleccionar Curso</label>
+                                        <select id="select-asignar-curso" required>
+                                            <option value="">Seleccione un curso...</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary align-self-end">Asignar</button>
+                                </form>
+
+                                <h4 class="margin-top-20">Cursos Asignados Actualmente</h4>
+                                <ul id="list-estudiante-cursos-asignados" class="custom-list">
+                                    <li>Cargando cursos...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: CURSOS Y SALONES -->
+                <section id="pane-cursos-salones" class="pane hidden">
+                    <div class="grid-split">
+                        <!-- Panel de Cursos -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Agregar Nuevo Curso</h2>
+                            </div>
+                            <div class="card-body">
+                                <form id="form-crear-curso">
+                                    <div class="form-group">
+                                        <label for="curso-codigo">Código del Curso</label>
+                                        <input type="text" id="curso-codigo" placeholder="Ej. DW-202" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="curso-nombre">Nombre del Curso</label>
+                                        <input type="text" id="curso-nombre" placeholder="Ej. Desarrollo Web" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="curso-descripcion">Descripción</label>
+                                        <textarea id="curso-descripcion" placeholder="Ej. Curso práctico de desarrollo frontend..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-block">Guardar Curso</button>
+                                </form>
+
+                                <h3 class="margin-top-20">Catálogo de Cursos</h3>
+                                <div class="table-responsive max-height-300">
+                                    <table class="table" id="table-catalogo-cursos">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td colspan="2" class="text-center">Cargando...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Salones y Horarios -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Asignación de Cursos a Salones de Clase</h2>
+                            </div>
+                            <div class="card-body">
+                                <form id="form-crear-salon-curso">
+                                    <div class="row-form">
+                                        <div class="form-group">
+                                            <label for="select-salon-id">Salón</label>
+                                            <select id="select-salon-id" required>
+                                                <option value="">Seleccione...</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="select-curso-id">Curso</label>
+                                            <select id="select-curso-id" required>
+                                                <option value="">Seleccione...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="salon-horario">Horario de Clase</label>
+                                        <input type="text" id="salon-horario" placeholder="Ej. Sábado 07:00-09:00" required>
+                                    </div>
+                                    <div class="row-form justify-between">
+                                        <button type="button" id="btn-crear-salon-modal" class="btn btn-secondary"><i class="fa-solid fa-plus"></i> Crear Salón</button>
+                                        <button type="submit" class="btn btn-primary">Asignar Curso a Salón</button>
+                                    </div>
+                                </form>
+
+                                <h3 class="margin-top-20">Salones con Cursos Asignados</h3>
+                                <div class="table-responsive max-height-300">
+                                    <table class="table" id="table-salones-asignados">
+                                        <thead>
+                                            <tr>
+                                                <th>Salón</th>
+                                                <th>Curso</th>
+                                                <th>Horario</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td colspan="4" class="text-center">Cargando...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODAL: CREAR SALÓN -->
+                    <div id="modal-crear-salon" class="modal hidden">
+                        <div class="modal-content modal-small">
+                            <div class="modal-header">
+                                <h3>Crear Nuevo Salón de Clase</h3>
+                                <button class="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="form-crear-salon">
+                                    <div class="form-group">
+                                        <label for="new-salon-nombre">Nombre del Salón</label>
+                                        <input type="text" id="new-salon-nombre" placeholder="Ej. Salón 103" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="new-salon-capacidad">Capacidad Máxima</label>
+                                        <input type="number" id="new-salon-capacidad" placeholder="Ej. 30" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-block">Crear Salón</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: MONITOREO DE CÁMARA (RECONOCIMIENTO) -->
+                <section id="pane-camara" class="pane hidden">
+                    <div class="grid-split camera-layout">
+                        <!-- Panel Izquierdo: Streaming de Cámara -->
+                        <div class="card">
+                            <div class="card-header-actions">
+                                <h2>Cámara de Seguridad Biométrica</h2>
+                                <div class="location-selector">
+                                    <label for="select-camara-ubicacion"><i class="fa-solid fa-location-dot"></i></label>
+                                    <select id="select-camara-ubicacion">
+                                        <option value="Puerta Principal">Puerta Principal</option>
+                                        <option value="Salón 101">Salón 101</option>
+                                        <option value="Salón 102">Salón 102</option>
+                                        <option value="Salón 201">Salón 201</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body camera-body">
+                                <!-- Elemento Video oculto que captura la webcam del navegador -->
+                                <video id="webcam-video" autoplay playsinline muted width="640" height="480" class="hidden"></video>
+                                
+                                <div class="video-container-wrapper">
+                                    <!-- Canvas visible donde dibujamos el feed de video y cuadros del rostro -->
+                                    <canvas id="webcam-canvas" width="640" height="480"></canvas>
+                                    <div id="camera-overlay-text" class="camera-overlay-text">Iniciando Cámara...</div>
+                                    
+                                    <div class="camera-scanner-laser"></div>
+                                </div>
+
+                                <div class="camera-controls">
+                                    <button id="btn-toggle-camera" class="btn btn-primary">
+                                        <i class="fa-solid fa-video-slash"></i> Apagar Cámara
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel Derecho: Logs de Reconocimiento -->
+                        <div class="card flex-column max-height-600">
+                            <div class="card-header">
+                                <h2>Historial de Detección en Tiempo Real</h2>
+                                <span class="badge badge-pulse">En Línea</span>
+                            </div>
+                            <div class="card-body flex-grow overflow-y" id="camera-recognition-logs">
+                                <div class="no-logs">
+                                    <i class="fa-solid fa-face-viewfinder"></i>
+                                    <p>Esperando detecciones faciales...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: ÁRBOL DE ASISTENCIAS -->
+                <section id="pane-arbol" class="pane hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Estructura del Árbol de Asistencia a Instalaciones</h2>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-secondary margin-bottom-20">Organización jerárquica de ingresos a las puertas y salones en la sede Boca del Monte.</p>
+                            <div class="tree-root-container" id="attendance-tree-container">
+                                <!-- El árbol se cargará aquí de forma dinámica -->
+                                <p class="text-center">Cargando jerarquía del árbol...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: GESTIÓN DE RESTRICCIONES -->
+                <section id="pane-restricciones" class="pane hidden">
+                    <div class="grid-split">
+                        <!-- Panel Agregar Restricción -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Agregar Restricción de Ingreso</h2>
+                            </div>
+                            <div class="card-body">
+                                <form id="form-agregar-restriccion">
+                                    <div class="form-group">
+                                        <label for="restriccion-carnet">Carnet del Estudiante / Persona</label>
+                                        <input type="text" id="restriccion-carnet" placeholder="Ingrese el carnet" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="restriccion-motivo">Motivo de Restricción</label>
+                                        <textarea id="restriccion-motivo" placeholder="Ej. Pago pendiente de matrícula, suspensión académica..." required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger btn-block"><i class="fa-solid fa-ban"></i> Bloquear Acceso</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Panel Lista de Restricciones -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Personas con Restricción Activa</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table" id="table-restricciones">
+                                        <thead>
+                                            <tr>
+                                                <th>Carnet</th>
+                                                <th>Nombre</th>
+                                                <th>Motivo</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td colspan="4" class="text-center">Cargando restricciones...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: PORTAL DE ESTUDIANTE (PERFIL) -->
+                <section id="pane-estudiante-perfil" class="pane hidden">
+                    <div class="grid-split">
+                        <!-- Perfil Card -->
+                        <div class="card student-profile-card">
+                            <div class="card-body text-center">
+                                <div class="student-avatar">
+                                    <i class="fa-solid fa-graduation-cap"></i>
+                                </div>
+                                <h2 id="student-profile-name">- -</h2>
+                                <p class="student-carnet-label">Carnet: <span id="student-profile-carnet">-</span></p>
+                                
+                                <div class="student-details-list">
+                                    <div class="detail-row"><span>Carrera</span><strong id="student-profile-carrera">-</strong></div>
+                                    <div class="detail-row"><span>Semestre / Sección</span><strong id="student-profile-sem-sec">-</strong></div>
+                                    <div class="detail-row"><span>Correo</span><strong id="student-profile-correo">-</strong></div>
+                                    <div class="detail-row"><span>Teléfono</span><strong id="student-profile-telefono">-</strong></div>
+                                </div>
+
+                                <button id="btn-download-pdf-carnet" class="btn btn-primary btn-block margin-top-20">
+                                    <i class="fa-solid fa-file-pdf"></i> Descargar Carnet Digital (PDF)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Horarios y Asistencias -->
+                        <div class="card flex-column">
+                            <div class="tabs-container">
+                                <div class="tab-headers">
+                                    <button class="tab-header active" data-tab="tab-estudiante-cursos">Mis Cursos y Horarios</button>
+                                    <button class="tab-header" data-tab="tab-estudiante-asistencias">Historial de Ingresos</button>
+                                </div>
+                                <div class="tab-content">
+                                    <div id="tab-estudiante-cursos" class="tab-pane active">
+                                        <div class="table-responsive">
+                                            <table class="table" id="table-estudiante-cursos">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Código</th>
+                                                        <th>Nombre del Curso</th>
+                                                        <th>Salón Asignado</th>
+                                                        <th>Horario</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr><td colspan="4" class="text-center">No tiene cursos asignados.</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div id="tab-estudiante-asistencias" class="tab-pane">
+                                        <div class="table-responsive">
+                                            <table class="table" id="table-estudiante-asistencias">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ubicación</th>
+                                                        <th>Fecha y Hora</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr><td colspan="2" class="text-center">No hay ingresos registrados.</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN: REGISTRO DE PERSONAS (Formulario y Foto) -->
+                <!-- Accesible para el administrador desde el checklist de estudiantes -->
+                <div id="modal-registro-estudiante" class="modal hidden">
+                    <div class="modal-content modal-large">
+                        <div class="modal-header">
+                            <h3>Registrar Persona (Estudiante/Docente)</h3>
+                            <button class="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="form-registrar-persona" enctype="multipart/form-data">
+                                <div class="grid-split margin-bottom-0">
+                                    <!-- Datos -->
+                                    <div class="form-column">
+                                        <h4>Datos Biográficos</h4>
+                                        <div class="row-form">
+                                            <div class="form-group">
+                                                <label for="reg-carnet">Carnet *</label>
+                                                <input type="text" id="reg-carnet" placeholder="Ej. 5090-20-1234" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="reg-tipo">Rol de Persona *</label>
+                                                <select id="reg-tipo" required>
+                                                    <option value="Estudiante">Estudiante</option>
+                                                    <option value="Catedrático">Catedrático</option>
+                                                    <option value="Administrativo">Administrativo</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row-form">
+                                            <div class="form-group">
+                                                <label for="reg-nombre">Nombre *</label>
+                                                <input type="text" id="reg-nombre" placeholder="Nombre" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="reg-apellido">Apellido *</label>
+                                                <input type="text" id="reg-apellido" placeholder="Apellido" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-correo">Correo electrónico *</label>
+                                            <input type="email" id="reg-correo" placeholder="correo@umg.edu.gt" required>
+                                        </div>
+                                        <div class="row-form">
+                                            <div class="form-group">
+                                                <label for="reg-telefono">Teléfono</label>
+                                                <input type="text" id="reg-telefono" placeholder="Número de teléfono">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="reg-carrera">Carrera</label>
+                                                <input type="text" id="reg-carrera" placeholder="Ej. Ingeniería en Sistemas">
+                                            </div>
+                                        </div>
+                                        <div class="row-form">
+                                            <div class="form-group">
+                                                <label for="reg-semestre">Semestre</label>
+                                                <input type="text" id="reg-semestre" placeholder="Ej. Primer Semestre">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="reg-seccion">Sección</label>
+                                                <input type="text" id="reg-seccion" placeholder="Ej. A">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Captura de foto -->
+                                    <div class="form-column camera-column">
+                                        <h4>Captura Biométrica</h4>
+                                        <div class="reg-camera-container">
+                                            <video id="reg-webcam-video" autoplay playsinline muted width="320" height="240"></video>
+                                            <canvas id="reg-webcam-canvas" width="320" height="240" class="hidden"></canvas>
+                                            <div id="reg-photo-preview" class="photo-preview hidden">
+                                                <img id="img-photo-preview" src="" alt="Vista previa">
+                                            </div>
+                                        </div>
+                                        <div class="reg-camera-buttons">
+                                            <button type="button" id="btn-reg-take-photo" class="btn btn-secondary">
+                                                <i class="fa-solid fa-camera"></i> Tomar Foto
+                                            </button>
+                                            <button type="button" id="btn-reg-upload-btn" class="btn btn-secondary">
+                                                <i class="fa-solid fa-upload"></i> Subir Foto
+                                            </button>
+                                            <button type="button" id="btn-reg-retry-photo" class="btn btn-secondary hidden">
+                                                <i class="fa-solid fa-rotate-left"></i> Reintentar
+                                            </button>
+                                            <input type="file" id="reg-upload-file" accept="image/*" class="hidden">
+                                        </div>
+                                        <p class="text-secondary text-center font-size-12 margin-top-10">
+                                            Asegúrese de que el rostro del estudiante esté centrado y bien iluminado.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer justify-end margin-top-20">
+                                    <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+                                    <button type="submit" id="btn-submit-registro" class="btn btn-success margin-left-10" disabled>
+                                        <i class="fa-solid fa-save"></i> Registrar Estudiante
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts de la aplicación -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
