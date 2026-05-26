@@ -352,6 +352,58 @@ def registrar_persona():
 
 # --- RECONOCIMIENTO FACIAL WEB ---
 
+def find_best_match_opencv(frame):
+    """
+    Compara el frame de cámara con las fotos de alumnos guardadas
+    en data/carnets usando correlación de histogramas en el espacio HSV.
+    Retorna el carnet de la mejor coincidencia o None si no supera el umbral.
+    """
+    if frame is None:
+        return None
+        
+    foto_dir = os.path.join(os.path.dirname(__file__), 'data', 'carnets')
+    if not os.path.exists(foto_dir):
+        return None
+        
+    try:
+        # Calcular histograma HSV de la imagen capturada
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        hist_frame = cv2.calcHist([hsv_frame], [0, 1], None, [50, 60], [0, 180, 0, 256])
+        cv2.normalize(hist_frame, hist_frame, 0, 1, cv2.NORM_MINMAX)
+    except Exception as e:
+        print(f"[OPENCV SIM] Error procesando frame capturado: {e}")
+        return None
+        
+    best_score = -1.0
+    best_carnet = None
+    
+    for filename in os.listdir(foto_dir):
+        if filename.startswith("foto_") and filename.endswith(".jpg"):
+            carnet = filename[5:-4]
+            ref_path = os.path.join(foto_dir, filename)
+            try:
+                ref_img = cv2.imread(ref_path)
+                if ref_img is None:
+                    continue
+                hsv_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2HSV)
+                hist_ref = cv2.calcHist([hsv_ref], [0, 1], None, [50, 60], [0, 180, 0, 256])
+                cv2.normalize(hist_ref, hist_ref, 0, 1, cv2.NORM_MINMAX)
+                
+                score = cv2.compareHist(hist_frame, hist_ref, cv2.HISTCMP_CORREL)
+                print(f"[OPENCV SIM] Comparación con carnet {carnet} - Score: {score:.4f}")
+                if score > best_score:
+                    best_score = score
+                    best_carnet = carnet
+            except Exception as e:
+                print(f"[OPENCV SIM] Error al comparar con {filename}: {e}")
+                continue
+                
+    print(f"[OPENCV SIM] Mejor coincidencia: {best_carnet} con Score: {best_score:.4f}")
+    # Un score > 0.4 es un umbral razonable para correlación en HSV (1.0 es idéntico)
+    if best_carnet and best_score > 0.4:
+        return best_carnet
+    return None
+
 @app.route('/api/reconocimiento', methods=['POST'])
 def api_reconocimiento():
     # Validar permisos
@@ -378,11 +430,13 @@ def api_reconocimiento():
     if frame is None:
         return jsonify({'success': False, 'message': 'No se pudo leer la imagen.'}), 400
         
-    # Si no está instalado face_recognition, simulamos una detección con el primer estudiante registrado
+    # Si no está instalado face_recognition, simulamos una detección inteligente con OpenCV
     if not FACE_RECOGNITION_AVAILABLE:
-        if len(KNOWN_CARNETS) > 0:
-            carnet = KNOWN_CARNETS[0]
-            nombre = KNOWN_NAMES[0]
+        matched_carnet = find_best_match_opencv(frame)
+        if matched_carnet and matched_carnet in KNOWN_CARNETS:
+            match_index = KNOWN_CARNETS.index(matched_carnet)
+            carnet = KNOWN_CARNETS[match_index]
+            nombre = KNOWN_NAMES[match_index]
             
             # Verificar restricción
             motivo_restriccion = queries.check_restriccion(carnet)
@@ -402,17 +456,17 @@ def api_reconocimiento():
             if cooldown_key not in ultimos_registros or (current_time - ultimos_registros[cooldown_key] > 10):
                 queries.registrar_ingreso(carnet, ubicacion)
                 ultimos_registros[cooldown_key] = current_time
-                print(f"[RECONOCIMIENTO MOCK] Ingreso registrado: {nombre} en {ubicacion}")
+                print(f"[RECONOCIMIENTO MOCK OPENCV] Ingreso registrado: {nombre} en {ubicacion}")
                 
             return jsonify({
                 'success': True,
                 'status': 'allowed',
                 'name': nombre,
                 'carnet': carnet,
-                'message': 'Acceso Autorizado (Simulado - Sin face_recognition)'
+                'message': 'Acceso Autorizado (Simulación Inteligente - OpenCV)'
             })
         else:
-            return jsonify({'success': False, 'status': 'unknown', 'message': 'Persona no identificada (Simulado - Sin alumnos registrados).'})
+            return jsonify({'success': False, 'status': 'unknown', 'message': 'Persona no identificada (Rostro no coincide con base de datos).'})
 
     # Procesar detección real con face_recognition
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

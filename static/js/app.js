@@ -297,6 +297,7 @@ function loadPaneData(pane) {
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        modal.classList.remove('hidden');
         modal.classList.add('visible');
         if (modalId === 'modal-registro-estudiante') {
             startCameraRegistro();
@@ -308,6 +309,7 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('visible');
+        modal.classList.add('hidden');
         if (modalId === 'modal-registro-estudiante') {
             stopCameraRegistro();
         }
