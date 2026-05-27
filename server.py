@@ -675,12 +675,5 @@ def get_carnet_pdf(carnet):
     return jsonify({'message': 'Carnet PDF no disponible.'}), 404
 
 if __name__ == '__main__':
-    # Puerto dinámico para Render
-    port = int(os.environ.get("PORT", 5000))
-
-    # Ejecutar servidor Flask
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=False
-    )
+    # Registrar servidor
+    app.run(host='0.0.0.0', port=5000, debug=True)
